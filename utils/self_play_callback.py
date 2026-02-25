@@ -1,0 +1,135 @@
+from collections import defaultdict
+
+import numpy as np
+
+from ray.rllib.callbacks.callbacks import RLlibCallback
+from ray.rllib.core.rl_module.rl_module import RLModuleSpec
+from ray.rllib.utils.metrics import ENV_RUNNER_RESULTS
+
+'''
+Self_play_callback adapted from:
+https://github.com/ray-project/ray/blob/master/rllib/examples/multi_agent/utils/self_play_callback.py
+'''
+class SelfPlayCallback(RLlibCallback):
+    def __init__(self, win_rate_threshold):
+        super().__init__()
+        # 0=RandomPolicy, 1=1st main policy snapshot, -> no random so indexing form 0
+        # 2=2nd main policy snapshot, etc..
+        self.current_opponent = 0
+
+        self.win_rate_threshold = win_rate_threshold
+
+
+    def on_episode_end(
+        self,
+        *,
+        episode,
+        env_runner,
+        metrics_logger,
+        env,
+        env_index,
+        rl_module,
+        **kwargs,
+    ) -> None:
+        # Compute the win rate for this episode and log it with a window of 100.
+        main_agent = 'first_0' if episode.module_for(0) == "main" else 'second_0'
+        rewards = episode.get_rewards()
+        if main_agent in rewards:
+            main_won = sum(rewards[main_agent]) > 0.0 #changed for surround env
+            metrics_logger.log_value(
+                key = "win_rate",
+                value = float(main_won),
+                reduce="mean",
+            )
+        
+        modules = []
+        for agent_id in ['first_0', 'second_0']:
+            modules.append(episode.module_for(agent_id))
+
+        metrics_logger.log_value(
+            key = ("matchups", (str(modules[0]) + ", " + str(modules[1]))),
+            value = 1,
+            reduce="sum"
+        )
+
+    # Re-define the mapping function, such that "main" is forced
+    # to play against any of the previously played modules
+    # (excluding "random"). -> no need to exclude random
+    def agent_to_module_mapping_fn(self, agent_id, episode, **kwargs):
+        # agent_id = [0|1] -> policy depends on episode ID
+        # This way, we make sure that both modules sometimes play
+        # (start player) and sometimes agent1 (player to move 2nd).
+        opponent = "main_v{}".format(
+            np.random.choice(list(range(self.current_opponent + 1)))
+        )
+
+        module = 'error'
+        if hash(episode.id_) % 2 == 0:
+            if agent_id == 'first_0':
+                module = "main"
+            else:
+                module = opponent
+        else:
+            if agent_id == 'second_0':
+                module =  "main"
+            else:
+                module = opponent
+        return(module)
+    
+
+
+    def add_new_module(self, algorithm):
+
+        new_module_id = f"main_v{self.current_opponent}"
+        print(f"adding new opponent to the mix ({new_module_id}).")
+
+        main_module = algorithm.get_module("main")
+        main_state = main_module.get_state()
+
+        algorithm.add_module(
+            module_id=new_module_id,
+            module_spec=RLModuleSpec.from_module(main_module),
+            new_agent_to_module_mapping_fn=self.agent_to_module_mapping_fn,
+        )
+
+        algorithm.get_module(new_module_id).set_state(main_state)
+
+        self.current_opponent += 1
+
+
+    def on_train_result(self, *, algorithm, metrics_logger=None, result, **kwargs):
+        
+        if self.current_opponent == 0:
+            self.add_new_module(algorithm)
+        win_rate = (
+            result["env_runners"]["win_rate"]
+        )
+        print('Win Rate: ' + str(win_rate))
+        # If win rate is good -> Snapshot current policy and play against
+        # it next, keeping the snapshot fixed and only improving the "main"
+        # policy.
+        if win_rate is None:
+            print(f"Iter={algorithm.iteration} no win_rate yet.")
+            return
+        elif win_rate > self.win_rate_threshold:
+            self.add_new_module(algorithm)
+        else:
+            print("not good enough; will keep learning ...")
+
+        # +2 = main + random -> +1 no random
+        result["league_size"] = self.current_opponent + 1
+        print(
+            "Modules:",
+            list(
+                algorithm.env_runner_group
+                        .local_env_runner
+                        .module.keys()
+            )
+        )
+
+        print("Matchups: ")
+        matchups = result['env_runners']['matchups']
+        for key in matchups.keys():
+            print(key +': '+ str(matchups[key]))
+
+        print("Learners:", result["learners"].keys())

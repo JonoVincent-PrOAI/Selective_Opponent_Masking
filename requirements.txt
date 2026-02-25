@@ -1,0 +1,27 @@
+python==3.10
+
+# Core RL stack
+ray[rllib]==2.5.3
+ray[train]
+# PettingZoo + wrappers
+PettingZoo==1.25.0
+SuperSuit==3.10
+
+# Gymnasium (PettingZoo 1.25 requires >=1.0)
+gymnasium==1.1.1
+
+# Deep learning backend
+torch==2.0
+
+# RLlib / Ray stability pins
+numpy==1.24
+scipy>=1.9,<1.12
+protobuf<4.0.0
+cloudpickle>=2.2
+psutil>=5.9
+dm_tree==0.1.8
+pygame
+ale_py
+multi_agent_ale_py
+matplotlib
+ipywidgets
