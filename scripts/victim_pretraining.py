@@ -3,6 +3,7 @@ import torch
 import gymnasium as gym
 import argparse
 import sys
+import wandb
 
 if os.path.abspath("../") not in sys.path:
     sys.path.append(os.path.abspath("../"))
@@ -24,6 +25,7 @@ parser.add_argument("-ner", "--numEnvRunners", help="Number of env ruuners.")
 parser.add_argument("-ngpu", "--numGPU", help="Number of GPUs available for training.")
 parser.add_argument("-ni", "--numIter", help="Number of Training Iterations.")
 parser.add_argument("-v", "--verbose", help="True/Falser whether outputs should be given.")
+parser.add_argument("-wnb", "--WandBKey", help="API key W and B logger.")
 args = parser.parse_args()
 
 if args.saveDirectory:
@@ -49,7 +51,7 @@ else:
 if args.numGPU:
     num_gpus = int(args.numGPU)
 else:
-    num_gpus = 0
+    num_gpus = 1
 if args.numIter:
     num_iterations = int(args.numIter)
 else:
@@ -58,6 +60,21 @@ if args.verbose:
     verbose =bool(args.verbose)
 else:
     verbose = True
+if args.WandBKey:
+
+    wandb_key = args.WandBKey
+    wandb.login(key = wandb_key)
+
+    run = wandb.init(
+        project = 'Selective_Masking_Pretraining',
+        config={
+            "learning rate" : 2.5e-4,
+            "epochs" : num_iterations,
+            "batch size" : batch_size,
+        },
+    )
+else:
+    wandb_key = None
 
 
 
@@ -76,8 +93,6 @@ register_env(
     ENV_NAME,
     lambda config: env_creator(config),
 )
-
-
 
 config = (
     PPOConfig()
@@ -116,8 +131,17 @@ env_reward = []
 for i in range(num_iterations):
     print(str(i+1) + '/' + str(num_iterations))
     metrics = (algo.train())
-    print("Episode reward mean:", metrics["env_runners"].get("episode_return_mean"))
+    ep_reward = metrics["env_runners"].get("episode_return_mean")
+    print("Episode reward mean:", ep_reward)
+    if wandb_key != None:
+        wandb.log({'Episode Reward Mean': ep_reward})
+
+
     env_reward.append(metrics["env_runners"].get("episode_return_mean"))
+
     if i % checkpoint == 0:
         dir = os.path.abspath(save_dir + "/ep-" + str(i))
         algo.save(dir)
+
+if wandb_key != None:
+    wandb.finish()

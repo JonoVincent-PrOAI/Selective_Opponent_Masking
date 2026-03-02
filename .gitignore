@@ -2,3 +2,5 @@ test.ipynb
 ray_results
 .ALEvenv
 scripts/job_scripts
+wandb/
+wand_key.txt
