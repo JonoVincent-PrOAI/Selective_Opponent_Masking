@@ -17,6 +17,7 @@ from ray.rllib.core.rl_module.default_model_config import DefaultModelConfig
 # --- Defines and parses arguments ---
 parser = argparse.ArgumentParser(description="Pretraining for model in the surroun_v2 env. Trains a model in wrapped surround_v5")
 parser.add_argument("-sdir", "--saveDirectory", help="Directory checkpoints are saved to.")
+parser.add_argument("-chkpt", "--checkpoint", help="After how many episodes should a checkpoint be saved.")
 parser.add_argument("-sz", "--batchSize", help="Size of training batches.")
 parser.add_argument("-rl", "--rolloutLength", help="Lenght of rollout fragments.")
 parser.add_argument("-ner", "--numEnvRunners", help="Number of env ruuners.")
@@ -29,6 +30,10 @@ if args.saveDirectory:
     save_dir = args.saveDiectory
 else:
     save_dir = "./ray_results/PPO_surround_v5/"
+if args.checkpoint:
+    checkpoint = args.checkpoint
+else:
+    checkpoint = 10
 if args.batchSize:
     batch_size = int(args.batchSize)
 else:
@@ -113,6 +118,6 @@ for i in range(num_iterations):
     metrics = (algo.train())
     print("Episode reward mean:", metrics["env_runners"].get("episode_return_mean"))
     env_reward.append(metrics["env_runners"].get("episode_return_mean"))
-    
-    dir = os.path.abspath(save_dir + "/ep-" + str(i))
-    algo.save(dir)
+    if i % checkpoint == 0:
+        dir = os.path.abspath(save_dir + "/ep-" + str(i))
+        algo.save(dir)
