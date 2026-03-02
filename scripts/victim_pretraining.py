@@ -23,6 +23,7 @@ parser.add_argument("-sz", "--batchSize", help="Size of training batches.")
 parser.add_argument("-rl", "--rolloutLength", help="Lenght of rollout fragments.")
 parser.add_argument("-ner", "--numEnvRunners", help="Number of env ruuners.")
 parser.add_argument("-ngpu", "--numGPU", help="Number of GPUs available for training.")
+parser.add_argument("-ncpu", "--numCPU", help="Number of CPUs available for training.")
 parser.add_argument("-ni", "--numIter", help="Number of Training Iterations.")
 parser.add_argument("-v", "--verbose", help="True/Falser whether outputs should be given.")
 parser.add_argument("-wnb", "--WandBKey", help="API key W and B logger.")
@@ -52,6 +53,10 @@ if args.numGPU:
     num_gpus = int(args.numGPU)
 else:
     num_gpus = 1
+if args.numGPU:
+    num_cpus = int(args.numCPU)
+else:
+    num_cpus = 0
 if args.numIter:
     num_iterations = int(args.numIter)
 else:
@@ -117,7 +122,8 @@ config = (
         vf_loss_coeff=0.5,
         entropy_coeff=0.01,
     )
-    .resources(num_gpus=num_gpus)
+    .resources(num_gpus=num_gpus,
+               num_cpus=num_cpus)
     .env_runners(
         num_env_runners = num_runners,
         rollout_fragment_length=rollout_fragment_length,
@@ -134,6 +140,7 @@ for i in range(num_iterations):
     ep_reward = metrics["env_runners"].get("episode_return_mean")
     print("Episode reward mean:", ep_reward)
     if wandb_key != None:
+        print('logged to wandb')
         wandb.log({'Episode Reward Mean': ep_reward})
 
 
