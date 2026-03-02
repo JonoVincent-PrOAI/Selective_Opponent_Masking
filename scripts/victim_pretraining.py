@@ -46,7 +46,7 @@ if args.rolloutLength:
 else:
     rollout_fragment_length = 512
 if args.numEnvRunners:
-    num_runners = int(args.numWorkers)
+    num_runners = int(args.numEnvRunners)
 else:
     num_runners = 1
 if args.numGPU:
