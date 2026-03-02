@@ -122,10 +122,10 @@ config = (
         vf_loss_coeff=0.5,
         entropy_coeff=0.01,
     )
-    .resources(num_gpus=num_gpus,
-               num_cpus=num_cpus)
+    .resources(num_gpus=num_gpus)
     .env_runners(
         num_env_runners = num_runners,
+        num_cpus_per_env_runner=num_cpus/num_runners,   
         rollout_fragment_length=rollout_fragment_length,
         batch_mode="complete_episodes",
     )
