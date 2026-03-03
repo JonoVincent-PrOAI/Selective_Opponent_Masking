@@ -4,6 +4,7 @@ import gymnasium as gym
 import argparse
 import sys
 import wandb
+import ray
 
 if os.path.abspath("../") not in sys.path:
     sys.path.append(os.path.abspath("../"))
@@ -131,6 +132,7 @@ config = (
     )
 )
 
+ray.init(num_cpus=num_cpus, num_gpus=num_gpus)
 algo = config.build()
 policy_loss = {}
 env_reward = []
