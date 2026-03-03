@@ -130,6 +130,10 @@ config = (
         rollout_fragment_length=rollout_fragment_length,
         batch_mode="complete_episodes",
     )
+    .learners(
+    num_learners=1,
+    num_gpus_per_learner=1, 
+    )
 )
 
 ray.init(num_cpus=num_cpus, num_gpus=num_gpus)
