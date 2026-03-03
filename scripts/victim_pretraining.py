@@ -148,7 +148,7 @@ for i in range(num_iterations):
 
     env_reward.append(metrics["env_runners"].get("episode_return_mean"))
 
-    if i % checkpoint == 0:
+    if i % int(checkpoint) == 0:
         dir = os.path.abspath(save_dir + "/ep-" + str(i))
         algo.save(dir)
 
