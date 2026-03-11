@@ -18,9 +18,9 @@ class SelfPlayCallback(RLlibCallback):
         # 0=RandomPolicy, 1=1st main policy snapshot, -> no random so indexing form 0
         # 2=2nd main policy snapshot, etc..
         self.current_opponent = 0 #tracks ooponent version number
-        self.league_opponents = [] #list of opponent included in the legue
         self.win_rate_threshold = win_rate_threshold #threshold foradding new opponent to league
         self.max_league_size = max_league_size
+        self.non_opponent_modules = ['__all_modules__', 'default_policy', 'main']
 
 
     def on_episode_end(
@@ -67,13 +67,19 @@ class SelfPlayCallback(RLlibCallback):
         # This way, we make sure that both modules sometimes play
         # (start player) and sometimes agent1 (player to move 2nd).
 
+        modules = episode.env_runner.module.keys()
+        league_opponents = [
+        m for m in modules
+        if m not in self.non_opponent_modules
+        ]
+
         hash_id = hash(episode.id_)
 
-        if len(self.league_opponents) == 0:
+        if len(league_opponents) == 0:
             opponent = "main"
         else:
-            idx = hash((hash_id, "opponent")) % len(self.league_opponents)
-            opponent = self.league_opponents[idx]
+            idx = hash((hash_id, "opponent")) % len(league_opponents)
+            opponent = league_opponents[idx]
 
         side = hash((hash_id, "side")) % 2
 
@@ -102,11 +108,6 @@ class SelfPlayCallback(RLlibCallback):
 
         algorithm.get_module(new_module_id).set_state(main_state)
         self.current_opponent += 1
-        self.league_opponents.append(new_module_id)
-
-        if len(self.league_opponents) > self.max_league_size:
-            oldest_opponent = self.league_opponents.pop(0)
-            algorithm.remove_module(oldest_opponent)
 
 
     def on_train_result(self, *, algorithm, metrics_logger=None, result, **kwargs):
@@ -117,17 +118,11 @@ class SelfPlayCallback(RLlibCallback):
 
         if win_rate is None:
             print(f"Iter={algorithm.iteration} no win_rate yet.")
-            return
-        print('Win Rate: ' + str(win_rate))
-        # If win rate is good -> Snapshot current policy and play against
-        # it next, keeping the snapshot fixed and only improving the "main"
-        # policy.
-        if win_rate is None:
-            print(f"Iter={algorithm.iteration} no win_rate yet.")
-            return
         elif win_rate > self.win_rate_threshold:
+            print('Win Rate: ' + str(win_rate))
             self.add_new_module(algorithm)
         else:
+            print('Win Rate: ' + str(win_rate))
             print("not good enough; will keep learning ...")
 
         # +2 = main + random -> +1 no random
@@ -137,9 +132,19 @@ class SelfPlayCallback(RLlibCallback):
             list(
                 algorithm.env_runner_group
                         .local_env_runner
-                        .module.keys()
+                        .module
             )
         )
+
+        modules = algorithm.local_env_runner.module.keys()
+        league_opponents = sorted(
+            m for m in modules if m not in self.non_opponent_modules
+        )
+
+        if len(league_opponents) > self.max_league_size:
+            oldest_opponent = league_opponents.pop(0)
+            algorithm.remove_module(oldest_opponent)
+            print('removed opponent: ' + str(oldest_opponent))
 
         print("Matchups: ")
         matchups = result['env_runners']['matchups']
