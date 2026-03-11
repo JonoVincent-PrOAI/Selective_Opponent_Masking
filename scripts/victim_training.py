@@ -17,6 +17,8 @@ from ray.rllib.env.wrappers.pettingzoo_env import ParallelPettingZooEnv
 from ray.rllib.core.rl_module.default_model_config import DefaultModelConfig
 from ray.tune.registry import register_env
 from ray.rllib.algorithms.ppo import PPOConfig
+from ray.rllib.algorithms.algorithm import Algorithm
+
 
 from utils.surround_v2_wrapper import Surround_v2_Wrapper
 from utils.self_play_callback import SelfPlayCallback
@@ -43,7 +45,7 @@ else:
 if args.saveDirectory:
     save_dir = args.saveDirectory
 else:
-    save_dir = "./ray_results/PPO_surround_v5/"
+    save_dir = "./ray_results/PPO_surround_v2/"
 if args.checkpoint:
     checkpoint = args.checkpoint
 else:
@@ -125,7 +127,7 @@ config = (
             (
                 SelfPlayCallback
             ),
-            win_rate_threshold=0.8,
+            win_rate_threshold=0.7,
         )
     )
     .framework("torch")
@@ -150,7 +152,7 @@ config = (
         minibatch_size=512,
         num_epochs=1,
     )
-    # s.resources(num_gpus=num_gpus)
+    .resources(num_gpus=num_gpus)
     .multi_agent(
     policies={"main"},
     policies_to_train=["main"],
@@ -164,22 +166,21 @@ config = (
         batch_mode="truncate_episodes",
 
     )
-    # .learners(
-    # num_learners=1,
-    # num_gpus_per_learner=1,
-    # )
+    .learners(
+    num_learners=1,
+    num_gpus_per_learner=1,
+    )
 )
 
-# ray.init(
-#     num_cpus=int(num_cpus),
-#     num_gpus=int(num_gpus),
-# )
+ray.init(
+     num_cpus=int(num_cpus),
+     num_gpus=int(num_gpus),
+)
 
 algo = config.build_algo()
-algo.restore(os.path.abspath(load_dir))
+algo.restore(load_dir)
 policy_loss = {}
 env_reward = []
-num_iterations = 10
 for i in range(num_iterations):
     print(str(i + 1) + '/' + str(num_iterations))
     metrics = (algo.train())
@@ -188,13 +189,12 @@ for i in range(num_iterations):
             metrics["env_runners"]["win_rate"]
         )
     reward = metrics["env_runners"]["module_episode_returns_mean"]["main"]
-    print('Reward: ' + str(reward))
     if wandb_key != None:
         print('logged to wandb')
         wandb.log({'Main Policy Winrate': win_rate})
-
-save_dir = save_dir = os.path.abspath("./ray_results/PPO_surround_v2")
-algo.save(save_dir)
-
+        wandb.log({'Main Policy Mean Reward': reward})
+    if i % int(checkpoint) == 0:
+        dir = os.path.abspath(save_dir + "/ep-" + str(i))
+        algo.save(dir)
 if wandb_key != None:
     wandb.finish()
