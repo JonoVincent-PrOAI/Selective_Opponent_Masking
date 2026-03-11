@@ -66,15 +66,18 @@ class SelfPlayCallback(RLlibCallback):
         # agent_id = [0|1] -> policy depends on episode ID
         # This way, we make sure that both modules sometimes play
         # (start player) and sometimes agent1 (player to move 2nd).
-        if "opponent" not in episode.user_data:
-            if len(self.league_opponents) == 0:
-                episode.user_data["opponent"] = "main"
-            else:
-                episode.user_data["opponent"] = np.random.choice(self.league_opponents)
 
-        opponent = episode.user_data["opponent"]
+        hash_id = hash(episode.id_)
 
-        if hash(episode.id_) % 2 == 0:
+        if len(self.league_opponents) == 0:
+            opponent = "main"
+        else:
+            idx = hash((hash_id, "opponent")) % len(self.league_opponents)
+            opponent = self.league_opponents[idx]
+
+        side = hash((hash_id, "side")) % 2
+
+        if side == 0:
             return "main" if agent_id == "first_0" else opponent
         else:
             return "main" if agent_id == "second_0" else opponent
