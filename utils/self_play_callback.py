@@ -136,7 +136,7 @@ class SelfPlayCallback(RLlibCallback):
             )
         )
 
-        modules = algorithm.local_env_runner.module.keys()
+        modules = algorithm.env_runner_group.local_env_runner.module.keys()
         league_opponents = sorted(
             m for m in modules if m not in self.non_opponent_modules
         )
