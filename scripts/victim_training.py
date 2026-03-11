@@ -128,6 +128,7 @@ config = (
                 SelfPlayCallback
             ),
             win_rate_threshold=0.7,
+            max_league_size = 15
         )
     )
     .framework("torch")

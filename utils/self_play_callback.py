@@ -9,15 +9,18 @@ from ray.rllib.utils.metrics import ENV_RUNNER_RESULTS
 '''
 Self_play_callback adapted from:
 https://github.com/ray-project/ray/blob/master/rllib/examples/multi_agent/utils/self_play_callback.py
+
+Further adapted to implement priotitised fictious self-play.
 '''
 class SelfPlayCallback(RLlibCallback):
-    def __init__(self, win_rate_threshold):
+    def __init__(self, win_rate_threshold, max_league_size):
         super().__init__()
         # 0=RandomPolicy, 1=1st main policy snapshot, -> no random so indexing form 0
         # 2=2nd main policy snapshot, etc..
-        self.current_opponent = 0
-
-        self.win_rate_threshold = win_rate_threshold
+        self.current_opponent = 0 #tracks ooponent version number
+        self.league_opponents = [] #list of opponent included in the legue
+        self.win_rate_threshold = win_rate_threshold #threshold foradding new opponent to league
+        self.max_league_size = max_league_size
 
 
     def on_episode_end(
@@ -59,9 +62,7 @@ class SelfPlayCallback(RLlibCallback):
         # agent_id = [0|1] -> policy depends on episode ID
         # This way, we make sure that both modules sometimes play
         # (start player) and sometimes agent1 (player to move 2nd).
-        opponent = "main_v{}".format(
-            np.random.choice(list(range(self.current_opponent + 1)))
-        )
+        opponent = (np.random.choice(list(self.league_opponents)))
 
         module = 'error'
         if hash(episode.id_) % 2 == 0:
@@ -95,8 +96,13 @@ class SelfPlayCallback(RLlibCallback):
         )
 
         algorithm.get_module(new_module_id).set_state(main_state)
-
         self.current_opponent += 1
+        self.league.append(new_module_id)
+
+        if len(self.league_opponents) > self.max_league_size:
+            oldest_opponent = self.league_opponents[0]
+            self.league_opponents.pop(oldest_opponent)
+            algorithm.remove_module(oldest_opponent)
 
 
     def on_train_result(self, *, algorithm, metrics_logger=None, result, **kwargs):
