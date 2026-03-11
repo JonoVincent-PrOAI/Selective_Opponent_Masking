@@ -4,3 +4,4 @@ ray_results
 scripts/job_scripts
 wandb/
 wand_key.txt
+output
