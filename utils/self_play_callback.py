@@ -35,7 +35,11 @@ class SelfPlayCallback(RLlibCallback):
         **kwargs,
     ) -> None:
         # Compute the win rate for this episode and log it with a window of 100.
-        main_agent = 'first_0' if self.agent_to_module_mapping_fn('first_0', episode) == "main" else 'second_0'
+        if episode.module_for("first_0") == "main":
+            main_agent = "first_0"
+        else:
+            main_agent = "second_0"
+        
         rewards = episode.get_rewards()
         if main_agent in rewards:
             main_won = sum(rewards[main_agent]) > 0.0 #changed for surround env
@@ -62,20 +66,18 @@ class SelfPlayCallback(RLlibCallback):
         # agent_id = [0|1] -> policy depends on episode ID
         # This way, we make sure that both modules sometimes play
         # (start player) and sometimes agent1 (player to move 2nd).
-        opponent = (np.random.choice(list(self.league_opponents)))
+        if "opponent" not in episode.user_data:
+            if len(self.league_opponents) == 0:
+                episode.user_data["opponent"] = "main"
+            else:
+                episode.user_data["opponent"] = np.random.choice(self.league_opponents)
 
-        module = 'error'
+        opponent = episode.user_data["opponent"]
+
         if hash(episode.id_) % 2 == 0:
-            if agent_id == 'first_0':
-                module = "main"
-            else:
-                module = opponent
+            return "main" if agent_id == "first_0" else opponent
         else:
-            if agent_id == 'second_0':
-                module =  "main"
-            else:
-                module = opponent
-        return(module)
+            return "main" if agent_id == "second_0" else opponent
     
 
 
@@ -100,8 +102,7 @@ class SelfPlayCallback(RLlibCallback):
         self.league_opponents.append(new_module_id)
 
         if len(self.league_opponents) > self.max_league_size:
-            oldest_opponent = self.league_opponents[0]
-            self.league_opponents.pop(oldest_opponent)
+            oldest_opponent = self.league_opponents.pop(0)
             algorithm.remove_module(oldest_opponent)
 
 
@@ -109,9 +110,11 @@ class SelfPlayCallback(RLlibCallback):
         
         if self.current_opponent == 0:
             self.add_new_module(algorithm)
-        win_rate = (
-            result["env_runners"]["win_rate"]
-        )
+        win_rate = result.get("env_runners", {}).get("win_rate")
+
+        if win_rate is None:
+            print(f"Iter={algorithm.iteration} no win_rate yet.")
+            return
         print('Win Rate: ' + str(win_rate))
         # If win rate is good -> Snapshot current policy and play against
         # it next, keeping the snapshot fixed and only improving the "main"
