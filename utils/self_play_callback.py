@@ -32,7 +32,7 @@ class SelfPlayCallback(RLlibCallback):
         **kwargs,
     ) -> None:
         # Compute the win rate for this episode and log it with a window of 100.
-        main_agent = 'first_0' if episode.module_for(0) == "main" else 'second_0'
+        main_agent = 'first_0' if self.agent_to_module_mapping_fn('first_0', episode) == "main" else 'second_0'
         rewards = episode.get_rewards()
         if main_agent in rewards:
             main_won = sum(rewards[main_agent]) > 0.0 #changed for surround env
@@ -89,7 +89,9 @@ class SelfPlayCallback(RLlibCallback):
         algorithm.add_module(
             module_id=new_module_id,
             module_spec=RLModuleSpec.from_module(main_module),
+            config_overrides = {"policies_to_train":["main"]},
             new_agent_to_module_mapping_fn=self.agent_to_module_mapping_fn,
+            new_should_module_be_updated = ['main'],
         )
 
         algorithm.get_module(new_module_id).set_state(main_state)
@@ -132,4 +134,6 @@ class SelfPlayCallback(RLlibCallback):
         for key in matchups.keys():
             print(key +': '+ str(matchups[key]))
 
-        print("Learners:", result["learners"].keys())
+        for k,v in result["learners"].items():
+            if "num_module_steps_trained" in v:
+                print(k, v["num_module_steps_trained"])
