@@ -132,7 +132,7 @@ class SelfPlayCallback(RLlibCallback):
             list(
                 algorithm.env_runner_group
                         .local_env_runner
-                        .module
+                        .module.keys()
             )
         )
 
