@@ -97,7 +97,7 @@ class SelfPlayCallback(RLlibCallback):
 
         algorithm.get_module(new_module_id).set_state(main_state)
         self.current_opponent += 1
-        self.league.append(new_module_id)
+        self.league_opponents.append(new_module_id)
 
         if len(self.league_opponents) > self.max_league_size:
             oldest_opponent = self.league_opponents[0]
