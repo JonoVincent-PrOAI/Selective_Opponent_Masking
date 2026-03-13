@@ -201,7 +201,7 @@ config = (
     )
     .env_runners(
         num_env_runners = num_runners,
-        num_cpus_per_env_runner = num_cpu_per_env_runnner,
+        num_cpus_per_env_runner = num_cpu_per_env_runner,
         num_envs_per_env_runner = num_env_per_env_runner,
         rollout_fragment_length=rollout_fragment_length,
         batch_mode="truncate_episodes",
