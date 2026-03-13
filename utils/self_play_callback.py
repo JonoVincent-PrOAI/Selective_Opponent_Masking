@@ -21,6 +21,7 @@ class SelfPlayCallback(RLlibCallback):
         self.win_rate_threshold = win_rate_threshold #threshold foradding new opponent to league
         self.max_league_size = max_league_size
         self.non_opponent_modules = ['__all_modules__', 'default_policy', 'main']
+        self.league = []
 
 
     def on_episode_end(
@@ -59,90 +60,71 @@ class SelfPlayCallback(RLlibCallback):
             reduce="sum"
         )
 
-    # Re-define the mapping function, such that "main" is forced
-    # to play against any of the previously played modules
-    # (excluding "random"). -> no need to exclude random
-    def agent_to_module_mapping_fn(self, agent_id, episode, **kwargs):
-        # agent_id = [0|1] -> policy depends on episode ID
-        # This way, we make sure that both modules sometimes play
-        # (start player) and sometimes agent1 (player to move 2nd).
-
-        modules = episode.env_runner.module.keys()
-        league_opponents = [
-        m for m in modules
-        if m not in self.non_opponent_modules
-        ]
-
-        hash_id = hash(episode.id_)
-
-        if len(league_opponents) == 0:
-            opponent = "main"
-        else:
-            idx = hash((hash_id, "opponent")) % len(league_opponents)
-            opponent = league_opponents[idx]
-
-        side = hash((hash_id, "side")) % 2
-
-        if side == 0:
-            return "main" if agent_id == "first_0" else opponent
-        else:
-            return "main" if agent_id == "second_0" else opponent
-    
-
-
-    def add_new_module(self, algorithm):
-
-        new_module_id = f"main_v{self.current_opponent}"
-        print(f"adding new opponent to the mix ({new_module_id}).")
-
-        main_module = algorithm.get_module("main")
-        main_state = main_module.get_state()
-
-        algorithm.add_module(
-            module_id=new_module_id,
-            module_spec=RLModuleSpec.from_module(main_module),
-            config_overrides = {"policies_to_train":["main"]},
-            new_agent_to_module_mapping_fn=self.agent_to_module_mapping_fn,
-            new_should_module_be_updated = ['main'],
-        )
-
-        algorithm.get_module(new_module_id).set_state(main_state)
-        self.current_opponent += 1
-
-
     def on_train_result(self, *, algorithm, metrics_logger=None, result, **kwargs):
         
-        if self.current_opponent == 0:
-            self.add_new_module(algorithm)
         win_rate = result.get("env_runners", {}).get("win_rate")
 
         if win_rate is None:
             print(f"Iter={algorithm.iteration} no win_rate yet.")
-        elif win_rate > self.win_rate_threshold:
+
+        elif (win_rate > self.win_rate_threshold) or self.current_opponent == 0:
+
             print('Win Rate: ' + str(win_rate))
-            self.add_new_module(algorithm)
+            new_module_id = f"main_v{self.current_opponent}"
+            print(f"adding new opponent to the mix ({new_module_id}).")
+
+            self.league.append(new_module_id)
+            print(self.league)
+            league_snapshot = list(self.league)
+            # Re-define the mapping function, such that "main" is forced
+            # to play against any of the previously played modules
+            # (excluding "random"). -> no need to exclude random
+            def agent_to_module_mapping_fn(agent_id, episode, **kwargs):
+                # agent_id = [0|1] -> policy depends on episode ID
+                # This way, we make sure that both modules sometimes play
+                # (start player) and sometimes agent1 (player to move 2nd).
+                rng = np.random.default_rng(hash(episode.id_) % (2**32))
+                if len(league_snapshot) == 0:
+                    opponent = "main"
+                else:
+                    opponent = rng.choice(league_snapshot)
+
+                side = rng.integers(0,2)
+                if side == 0:
+                    return "main" if agent_id == "first_0" else opponent
+                else:
+                    return "main" if agent_id == "second_0" else opponent
+                
+            main_module = algorithm.get_module("main")
+            main_state = main_module.get_state()
+
+            algorithm.add_module(
+                module_id=new_module_id,
+                module_spec=RLModuleSpec.from_module(main_module),
+                config_overrides = {"policies_to_train":["main"]},
+                new_agent_to_module_mapping_fn=agent_to_module_mapping_fn,
+                new_should_module_be_updated = ['main'],
+            )
+
+            algorithm.get_module(new_module_id).set_state(main_state)
+            self.current_opponent += 1
+        
         else:
             print('Win Rate: ' + str(win_rate))
             print("not good enough; will keep learning ...")
 
         # +2 = main + random -> +1 no random
         result["league_size"] = self.current_opponent + 1
+        modules = algorithm.env_runner_group.local_env_runner.module.keys()
         print(
             "Modules:",
             list(
-                algorithm.env_runner_group
-                        .local_env_runner
-                        .module.keys()
+                modules
             )
         )
 
-        modules = algorithm.env_runner_group.local_env_runner.module.keys()
-        league_opponents = sorted(
-            m for m in modules if m not in self.non_opponent_modules
-        )
-
-        if len(league_opponents) > self.max_league_size:
-            oldest_opponent = league_opponents.pop(0)
+        if len(self.league) > self.max_league_size:
+            oldest_opponent = self.league.pop(0)
             algorithm.remove_module(oldest_opponent)
             print('removed opponent: ' + str(oldest_opponent))
 
