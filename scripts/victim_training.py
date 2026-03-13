@@ -85,7 +85,7 @@ else:
 if args.numEnvPerRun:
     num_env_per_env_runner = int(args.numEnvPerRun)
 else:
-    num_env_per_env_runnner = 3
+    num_env_per_env_runner = 3
 if args.numLearners:
     num_learners = int(args.numLearners)
 else:
