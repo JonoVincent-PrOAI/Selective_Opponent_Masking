@@ -79,9 +79,9 @@ if args.numGPU:
 else:
     num_gpus = 1
 if args.numCPUperRun:
-    num_cpu_per_env_runnner = int(args.numCPUperRun)
+    num_cpu_per_env_runner = int(args.numCPUperRun)
 else:
-    num_cpu_per_env_runnner = 1
+    num_cpu_per_env_runner = 1
 if args.numEnvPerRun:
     num_env_per_env_runner = int(args.numEnvPerRun)
 else:
