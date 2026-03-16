@@ -12,8 +12,8 @@ https://github.com/ray-project/ray/blob/master/rllib/examples/multi_agent/utils/
 
 Further adapted to implement priotitised fictious self-play.
 '''
-class SelfPlayCallback(RLlibCallback):
-    def __init__(self, win_rate_threshold, max_league_size):
+class PFSPCallback(RLlibCallback):
+    def __init__(self, win_rate_threshold, max_league_size, self_play_prob = None):
         super().__init__()
         # 0=RandomPolicy, 1=1st main policy snapshot, -> no random so indexing form 0
         # 2=2nd main policy snapshot, etc..
@@ -22,6 +22,10 @@ class SelfPlayCallback(RLlibCallback):
         self.max_league_size = max_league_size
         self.non_opponent_modules = ['__all_modules__', 'default_policy', 'main']
         self.league = []
+        if self_play_prob == None:
+            self.self_play_prob = 0.1
+        else:
+            self.self_play_prob = self_play_prob
 
 
     def on_episode_end(
@@ -36,17 +40,12 @@ class SelfPlayCallback(RLlibCallback):
         **kwargs,
     ) -> None:
         # Compute the win rate for this episode and log it with a window of 100.
-        if episode.module_for("first_0") == "main":
-            main_agent = "first_0"
-        else:
-            main_agent = "second_0"
-        
         rewards = episode.get_rewards()
-        if main_agent in rewards:
-            main_won = sum(rewards[main_agent]) > 0.0 #changed for surround env
+        for agent in rewards:
+            won = sum(rewards[agent]) > 0.0 #changed for surround env
             metrics_logger.log_value(
-                key = "win_rate",
-                value = float(main_won),
+                key = ("win_rate", episode.module_for(agent)),
+                value = float(won),
                 reduce="mean",
             )
         
@@ -62,8 +61,8 @@ class SelfPlayCallback(RLlibCallback):
 
     def on_train_result(self, *, algorithm, metrics_logger=None, result, **kwargs):
         
-        win_rate = result.get("env_runners", {}).get("win_rate")
-
+        win_rates = result.get("env_runners", {}).get("win_rate")
+        win_rate = win_rates['main']
         if win_rate is None:
             print(f"Iter={algorithm.iteration} no win_rate yet.")
 
@@ -76,6 +75,13 @@ class SelfPlayCallback(RLlibCallback):
             self.league.append(new_module_id)
             print(self.league)
             league_snapshot = list(self.league)
+            match_probs = [(
+                            win_rates[opp]/
+                            ((sum(win_rates.values())/len(win_rates.values())))
+                            ) * (1-self.self_play_prob)
+                           for opp in win_rates.keys()]
+            league_snapshot.append('main')
+            match_probs.append(self.self_play_prob)
             # Re-define the mapping function, such that "main" is forced
             # to play against any of the previously played modules
             # (excluding "random"). -> no need to exclude random
@@ -87,7 +93,7 @@ class SelfPlayCallback(RLlibCallback):
                 if len(league_snapshot) == 0:
                     opponent = "main"
                 else:
-                    opponent = rng.choice(league_snapshot)
+                    opponent = rng.choice(league_snapshot, p = match_probs)
 
                 side = rng.integers(0,2)
                 if side == 0:
@@ -109,9 +115,9 @@ class SelfPlayCallback(RLlibCallback):
             algorithm.get_module(new_module_id).set_state(main_state)
             self.current_opponent += 1
         
-        else:
-            print('Win Rate: ' + str(win_rate))
-            print("not good enough; will keep learning ...")
+        print('Winrates... ')
+        for module in result.get("env_runners", {}).get("win_rate").keys():
+            print("    "+str(module)+': ' + str(result.get("env_runners", {}).get("win_rate")[module]))
 
         # +2 = main + random -> +1 no random
         result["league_size"] = self.current_opponent + 1

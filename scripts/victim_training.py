@@ -22,7 +22,7 @@ from ray.rllib.algorithms.algorithm import Algorithm
 
 from utils.surround_v2_wrapper import Surround_v2_Wrapper
 from utils.self_play_callback import SelfPlayCallback
-
+from utils.PFSP_callback import PFSPCallback
 
 parser = argparse.ArgumentParser(description="Pretraining for model in the surroun_v2 env. Trains a model in wrapped surround_v5")
 parser.add_argument("-ldir", "--loadDirectory", help="Model checkpoint directory.")
@@ -165,7 +165,7 @@ config = (
     .callbacks(
         functools.partial(
             (
-                SelfPlayCallback
+                PFSPCallback
             ),
             win_rate_threshold=win_threshold,
             max_league_size = max_league_size
