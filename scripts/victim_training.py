@@ -229,7 +229,7 @@ for i in range(num_iterations):
     metrics = (algo.train())
     env_reward.append(metrics["env_runners"].get("episode_return_mean"))
     win_rate = (
-            metrics["env_runners"]["win_rate"]
+            metrics["env_runners"]["win_rate"]["main"]
         )
     reward = metrics["env_runners"]["module_episode_returns_mean"]["main"]
     if wandb_key != None:
