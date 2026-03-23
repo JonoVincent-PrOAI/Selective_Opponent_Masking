@@ -168,7 +168,8 @@ config = (
                 PFSPCallback
             ),
             win_rate_threshold=win_threshold,
-            max_league_size = max_league_size
+            max_league_size = max_league_size,
+            self_play_prob = 0.35
         )
     )
     .framework("torch")
