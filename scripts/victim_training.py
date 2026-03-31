@@ -26,27 +26,28 @@ from utils.PFSP_callback import PFSPCallback
 
 parser = argparse.ArgumentParser(description="Pretraining for model in the surroun_v2 env. Trains a model in wrapped surround_v5")
 parser.add_argument("-ldir", "--loadDirectory", help="Model checkpoint directory.")
-parser.add_argument("-sdir", "--saveDirectory", help="Directory checkpoints are saved to.")
-parser.add_argument("-chkpt", "--checkpoint", help="After how many episodes should a checkpoint be saved.")
-parser.add_argument("-sz", "--batchSize", help="Size of training batches.")
-parser.add_argument("-rl", "--rolloutLength", help="Lenght of rollout fragments.")
+parser.add_argument("-sdir", "--saveDirectory", help="Directory checkpoints are saved to.", default= "./ray_results/PPO_surround_v2/")
+parser.add_argument("-chkpt", "--checkpoint", help="After how many episodes should a checkpoint be saved.", default=10)
+parser.add_argument("-sz", "--batchSize", help="Size of training batches.", default=1536)
+parser.add_argument("-rl", "--rolloutLength", help="Lenght of rollout fragments.", default=512)
 
-parser.add_argument("-ner", "--numEnvRunners", help="Number of env ruuners.")
-parser.add_argument("-ngpu", "--numGPU", help="Number of GPUs available for training.")
-parser.add_argument("-ncpu", "--numCPU", help="Number of CPUs available for training.")
-parser.add_argument("-cpurun", "--numCPUperRun", help="Number of CPUs per env runner instance.")
-parser.add_argument("-envrun", "--numEnvPerRun", help="Number of env instances per env runner.")
+parser.add_argument("-ner", "--numEnvRunners", help="Number of env ruuners.", default=1)
+parser.add_argument("-ngpu", "--numGPU", help="Number of GPUs available for training.", default=1)
+parser.add_argument("-ncpu", "--numCPU", help="Number of CPUs available for training.", default=0)
+parser.add_argument("-cpurun", "--numCPUperRun", help="Number of CPUs per env runner instance.", default=1)
+parser.add_argument("-envrun", "--numEnvPerRun", help="Number of env instances per env runner.", default=3)
 
-parser.add_argument("-nl", "--numLearners", help="Number of learner instances.")
-parser.add_argument("-gpul", "--numGPUperLearn", help="Number of GPUs per learner instance.")
-parser.add_argument("-cpul", "--numCPUperLearn", help="Number of CPUs per learner instance.")
+parser.add_argument("-nl", "--numLearners", help="Number of learner instances.", default=1)
+parser.add_argument("-gpul", "--numGPUperLearn", help="Number of GPUs per learner instance.", default=1)
+parser.add_argument("-cpul", "--numCPUperLearn", help="Number of CPUs per learner instance.", default=1)
 
 
-parser.add_argument("-ni", "--numIter", help="Number of Training Iterations.")
-parser.add_argument("-nop", "--numOpp", help="Max Number of Opponents in League.")
-parser.add_argument("-win", "--winThreshold", help="Wunrate threshold where a new opponent is added to the league.")
+parser.add_argument("-ni", "--numIter", help="Number of Training Iterations.", default=10)
+parser.add_argument("-nop", "--numOpp", help="Max Number of Opponents in League.", default=15)
+parser.add_argument("-nmod", "--numMod", help ="the Number of RLLIB modules that will be created.", default=15)
+parser.add_argument("-win", "--winThreshold", help="Wunrate threshold where a new opponent is added to the league.", default=0.7)
 
-parser.add_argument("-v", "--verbose", help="True/False whether outputs should be given.")
+parser.add_argument("-v", "--verbose", help="True/False whether outputs should be given.", default=True)
 parser.add_argument("-wnb", "--WandBKey", help="API key W and B logger.")
 args = parser.parse_args()
 
@@ -54,70 +55,26 @@ if args.loadDirectory:
     load_dir = args.loadDirectory
 else:
     raise ValueError("Load directory must be provided")
-if args.saveDirectory:
-    save_dir = args.saveDirectory
-else:
-    save_dir = "./ray_results/PPO_surround_v2/"
-if args.checkpoint:
-    checkpoint = args.checkpoint
-else:
-    checkpoint = 10
-if args.batchSize:
-    batch_size = int(args.batchSize)
-else:
-    batch_size = 1536
-if args.rolloutLength:
-    rollout_fragment_length = int(args.rolloutLength)
-else:
-    rollout_fragment_length = 512
-if args.numEnvRunners:
-    num_runners = int(args.numEnvRunners)
-else:
-    num_runners = 1
-if args.numGPU:
-    num_gpus = int(args.numGPU)
-else:
-    num_gpus = 1
-if args.numCPUperRun:
-    num_cpu_per_env_runner = int(args.numCPUperRun)
-else:
-    num_cpu_per_env_runner = 1
-if args.numEnvPerRun:
-    num_env_per_env_runner = int(args.numEnvPerRun)
-else:
-    num_env_per_env_runner = 3
-if args.numLearners:
-    num_learners = int(args.numLearners)
-else:
-    num_learners = 1
-if args.numGPUperLearn:
-    num_GPUs_per_learner = int(args.numGPUperLearn)
-else:
-    num_GPUs_per_learner = 1
-if args.numCPUperLearn:
-    num_CPUs_per_learner = int(args.numCPUperLearn)
-else:
-    num_CPUs_per_learner = 1
-if args.numCPU:
-    num_cpus = int(args.numCPU)
-else:
-    num_cpus = 0
-if args.numIter:
-    num_iterations = int(args.numIter)
-else:
-    num_iterations = 10
-if args.numOpp:
-    max_league_size = int(args.numOpp)
-else:
-    max_league_size = 15
-if args.winThreshold:
-    win_threshold = float(args.winThreshold)
-else:
-    win_threshold = 0.7
-if args.verbose:
-    verbose =bool(args.verbose)
-else:
-    verbose = True
+save_dir = args.saveDirectory
+checkpoint = args.checkpoint
+batch_size = int(args.batchSize)
+rollout_fragment_length = int(args.rolloutLength)
+
+num_runners = int(args.numEnvRunners)
+num_gpus = int(args.numGPU)
+num_cpus = int(args.numCPU)
+num_cpu_per_env_runner = int(args.numCPUperRun)
+
+num_env_per_env_runner = int(args.numEnvPerRun)
+num_learners = int(args.numLearners)
+num_GPUs_per_learner = int(args.numGPUperLearn)
+num_CPUs_per_learner = int(args.numCPUperLearn)
+
+num_iterations = int(args.numIter)
+max_league_size = int(args.numOpp)
+num_mod = int(args.numMod)
+win_threshold = float(args.winThreshold)
+verbose =bool(args.verbose)
 if args.WandBKey:
 
     wandb_key = args.WandBKey
@@ -169,7 +126,7 @@ config = (
             ),
             win_rate_threshold=win_threshold,
             max_league_size = max_league_size,
-            self_play_prob = 0.5
+            num_modules = num_mod,
         )
     )
     .framework("torch")
@@ -181,7 +138,8 @@ config = (
                 [64, 4, 2],
                 [128, 4, 2],
             ],
-            fcnet_activation="relu",
+            conv_activation="silu",
+            head_fcnet_hiddens=[256],
         )
     )
     .training(
@@ -224,19 +182,25 @@ algo = config.build_algo()
 algo.restore(os.path.abspath(load_dir))
 policy_loss = {}
 env_reward = []
+if wandb_key != None:
+    wandb.init()
+
 for i in range(num_iterations):
     print(str(i + 1) + '/' + str(num_iterations))
     metrics = (algo.train())
     env_reward.append(metrics["env_runners"].get("episode_return_mean"))
-    if 'main' in metrics['env_runners']['win_rate'].keys():
-        win_rate = (
-                metrics["env_runners"]["win_rate"]["main"]
-            )
-        wandb.log({'Main Policy Winrate': win_rate})
-    reward = metrics["env_runners"]["module_episode_returns_mean"]["main"]
+
     if wandb_key != None:
+        if 'main' in metrics['env_runners']['win_rate'].keys():
+            win_rate = (
+                    metrics["env_runners"]["win_rate"]["main"]
+                )
+        wandb.log({'Main Policy Winrate': win_rate})
         print('logged to wandb')
-        wandb.log({'Main Policy Mean Reward': reward})
+        if 'main' in metrics["env_runners"]["module_episode_returns_mean"].keys():
+            reward = metrics["env_runners"]["module_episode_returns_mean"]["main"]
+            wandb.log({'Main Policy Mean Reward': reward})
+
     if i+1 % int(checkpoint) == 0:
         dir = os.path.abspath(save_dir + "/ep-" + str(i))
         algo.save(dir)
