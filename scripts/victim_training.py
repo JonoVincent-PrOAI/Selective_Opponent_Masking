@@ -192,10 +192,14 @@ for i in range(num_iterations):
 
     if wandb_key != None:
         if 'main' in metrics['env_runners']['win_rate'].keys():
-            win_rate = (
+            win_loss = (
                     metrics["env_runners"]["win_rate"]["main"]
                 )
-        wandb.log({'Main Policy Winrate': win_rate})
+            win_rate = (
+                metrics["env_runners"]["win_rate"]["main"]['wins']/(metrics["env_runners"]["win_rate"]["main"]['wins'] + metrics["env_runners"]["win_rate"]["main"]['losses'])
+            )
+        wandb.log({'Main Policy Win/loss': win_loss})
+        wandb.log({'Main Policy win rate': win_rate})
         print('logged to wandb')
         if 'main' in metrics["env_runners"]["module_episode_returns_mean"].keys():
             reward = metrics["env_runners"]["module_episode_returns_mean"]["main"]
