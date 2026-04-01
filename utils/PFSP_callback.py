@@ -84,7 +84,7 @@ class PFSPCallback(RLlibCallback):
     Adds a new opponent to the pool of opponents.
     The added opponent the current version of main frozen.
     '''
-    def add_new_opponent(self, algorithm, win_rates):
+    def add_new_opponent(self, win_rates, algorithm):
         
         new_opponent = f"opponent_{self.current_opponent}"
         print(f"adding new opponent to the mix ({new_opponent}).")
