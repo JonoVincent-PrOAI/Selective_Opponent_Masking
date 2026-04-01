@@ -103,7 +103,7 @@ class PFSPCallback(RLlibCallback):
             oldest_opponent = list(self.opponent_weights.keys())[0]
             win_rates[oldest_opponent] = 0#setting win-rate to 0 means it will be culled during module update
 
-        self.update_module_weights(self, win_rates, algorithm)#updates weights of modules
+        self.update_module_weights(win_rates, algorithm)#updates weights of modules
     '''
     Assigns new weights to modules based on the win-rate of opponents
     '''
@@ -154,7 +154,7 @@ class PFSPCallback(RLlibCallback):
                 self.module_to_opponent_mapping.pop(opp)
                 self.opponent_weights.pop(opp)
     '''
-    Tracks custom metrics like win-rate 
+    Tracks custom metrics like win-rate
     '''  
     def on_episode_end(
         self,
@@ -244,9 +244,10 @@ class PFSPCallback(RLlibCallback):
             print(f"Iter={algorithm.iteration} no win_rate yet.")
             return
         elif win_rate > self.win_rate_threshold:
-            self.add_new_opponent(self, algorithm, win_rates)
+            self.add_new_opponent(win_rates, algorithm)
         else:
-            self.update_module_weights(self, algorithm, win_rates)
+            print(win_rates)
+            self.update_module_weights(win_rates, algorithm)
 
         print(self.module_to_opponent_mapping)
 
