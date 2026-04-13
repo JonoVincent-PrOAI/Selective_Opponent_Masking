@@ -91,7 +91,10 @@ if args.WandBKey:
 else:
     wandb_key = None
 
-
+def betas_tensor_to_float(learner):
+    for param_grp_key in learner._optimizer_parameters.keys():
+        param_grp = param_grp_key.param_groups[0]
+        param_grp["betas"] = tuple(beta.item() for beta in param_grp["betas"])
 
 # --- Environment creator ---
 def env_creator(config):
@@ -180,6 +183,7 @@ ray.init(
 
 algo = config.build_algo()
 algo.restore(os.path.abspath(load_dir))
+algo.learner_group.foreach_learner(betas_tensor_to_float)
 policy_loss = {}
 env_reward = []
 if wandb_key != None:
