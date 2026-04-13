@@ -6,4 +6,6 @@ wandb/
 wand_key.txt
 output
 utils/__pycache__
-utils/__pycache__/self_play_callback.cpython-310.pyc
+utils/__pycache__/
+test.csv
+.DS_Store
