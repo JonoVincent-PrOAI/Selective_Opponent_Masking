@@ -20,8 +20,8 @@ class Surround_v2_Wrapper():
 
     def __init__(self, surround_env = None, frame_skip = None):
         
-        self.BOARD_BOUNDARY = [36,198,4,156]#the edges of the board in the rgb image (y,y,x,x)
-        self.BOARD_CELL_SIZE = {'height': 18, 'width': 38}#the dimensions of the baord in number of cells
+        self.BOARD_BOUNDARY = [27,207,0,160]#the edges of the board in the rgb image (y,y,x,x)
+        self.BOARD_CELL_SIZE = {'height': 20, 'width': 40}#the dimensions of the baord in number of cells
         self.CELL_DIMENSION = {'height' : 9, 'width' : 4}#the pixel dimensions of cells in the rgb image
 
         self.AGENT_INFO = {
@@ -64,7 +64,7 @@ class Surround_v2_Wrapper():
             agent: gym.spaces.Box(
                 low=0,
                 high=4,
-                shape=(18, 38, 1),
+                shape=(20, 40, 1),
                 dtype=np.float32,
             )
             for agent in self.env.possible_agents
@@ -72,13 +72,15 @@ class Surround_v2_Wrapper():
 
         self.action_spaces_dict = self.env.action_spaces
 
+        self.last_env_obs = None
+
     '''
     Resets the environemnt, required by gym.
     '''
     def reset(self, *, seed=None, options=None):
         board_img, info = self.env.reset(seed = seed, options = options)
         self.agents = self.env.agents
-
+        self.last_env_obs = board_img
         #converts reward into down-sampled obs space
         obs = {}
         for agent in self.agents:
@@ -95,7 +97,7 @@ class Surround_v2_Wrapper():
         total_reward = {agent: 0 for agent in action_dict}
         for _ in range(self.frame_skip):
             img_obs, reward, termination, truncation, info = self.env.step(action_dict)
-
+            self.last_env_obs = img_obs
             for agent in reward:
                 total_reward[agent] += reward[agent]
 
@@ -120,16 +122,18 @@ class Surround_v2_Wrapper():
         return(self.action_spaces_dict[agent_id])
 
     def _get_obs(self):
-        img_obs, reward, termination, truncation, info = self.env._get_obs()
         obs = {}
         for agent in self.agents:
-            obs[agent] = self.update_board(img_obs[agent], agent)
+            obs[agent] = self.update_board(self.last_env_obs[agent], agent)
         
         return obs
 
     def _get_info(self):
 
         return self.env._get_info()
+
+    def get_unwrapped_obs(self):
+        return(self.last_env_obs)
 
     '''
     Converts rgb image to 38x18 grid world array.

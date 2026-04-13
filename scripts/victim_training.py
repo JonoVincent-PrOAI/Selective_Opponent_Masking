@@ -99,7 +99,7 @@ def env_creator(config):
         surround_v2.parallel_env(
         obs_type="rgb_image",
         full_action_space=False,
-        max_cycles=1000,
+        max_cycles=15000,
     )
     )
 
@@ -204,8 +204,7 @@ for i in range(num_iterations):
         if 'main' in metrics["env_runners"]["module_episode_returns_mean"].keys():
             reward = metrics["env_runners"]["module_episode_returns_mean"]["main"]
             wandb.log({'Main Policy Mean Reward': reward})
-
-    if i+1 % int(checkpoint) == 0:
+    if i % int(checkpoint) == 0:
         dir = os.path.abspath(save_dir + "/ep-" + str(i))
         algo.save(dir)
 if wandb_key != None:
