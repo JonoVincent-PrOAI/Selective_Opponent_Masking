@@ -189,7 +189,7 @@ ray.init(
 
 algo = config.build_algo()
 algo.restore(os.path.abspath(load_dir))
-#algo.learner_group.foreach_learner(betas_tensor_to_float)
+algo.learner_group.foreach_learner(betas_tensor_to_float)
 policy_loss = {}
 env_reward = []
 if wandb_key != None:
