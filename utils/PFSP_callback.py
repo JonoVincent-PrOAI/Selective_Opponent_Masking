@@ -111,10 +111,15 @@ class PFSPCallback(RLlibCallback):
         #Calculates the number of modules for each opponent
         mod_per_opp = {}
         max = 0
-        max_key = None
+        max_key = list(win_rates.keys())[0]
         #normalises the win-rates so they roughly sum to the number of modules
         for opp in win_rates.keys():
-            num_mod = math.floor((win_rates[opp] / sum(win_rates.values())) * (self.num_modules))
+            print(win_rates)
+            print(self.num_modules)
+            if sum(win_rates.values()) > 0:
+                num_mod = math.floor((win_rates[opp] / sum(win_rates.values())) * (self.num_modules))
+            else:
+                num_mod = 0
             mod_per_opp[opp] = num_mod
             if num_mod > max:
                 max = mod_per_opp[opp]

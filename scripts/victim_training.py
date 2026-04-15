@@ -28,8 +28,11 @@ parser = argparse.ArgumentParser(description="Pretraining for model in the surro
 parser.add_argument("-ldir", "--loadDirectory", help="Model checkpoint directory.")
 parser.add_argument("-sdir", "--saveDirectory", help="Directory checkpoints are saved to.", default= "./ray_results/PPO_surround_v2/")
 parser.add_argument("-chkpt", "--checkpoint", help="After how many episodes should a checkpoint be saved.", default=10)
+
 parser.add_argument("-sz", "--batchSize", help="Size of training batches.", default=1536)
 parser.add_argument("-rl", "--rolloutLength", help="Lenght of rollout fragments.", default=512)
+parser.add_argument('-sgd', "--sgdIterations", help="Number of Sgd updates per batch.", default=20)
+parser.add_argument("-mbsz", "--minibatchSize", help='Size of sgd minibatches', default = 512)
 
 parser.add_argument("-ner", "--numEnvRunners", help="Number of env ruuners.", default=1)
 parser.add_argument("-ngpu", "--numGPU", help="Number of GPUs available for training.", default=1)
@@ -57,8 +60,11 @@ else:
     raise ValueError("Load directory must be provided")
 save_dir = args.saveDirectory
 checkpoint = args.checkpoint
+
 batch_size = int(args.batchSize)
 rollout_fragment_length = int(args.rolloutLength)
+num_sgd_iter = int(args.sgdIterations)
+minibatch_size = int(args.minibatchSize)
 
 num_runners = int(args.numEnvRunners)
 num_gpus = int(args.numGPU)
@@ -152,8 +158,8 @@ config = (
         clip_param=0.2,
         vf_loss_coeff=0.5,
         entropy_coeff=0.01,
-        minibatch_size=512,
-        num_epochs=1,
+        minibatch_size=minibatch_size,
+        num_epochs=num_sgd_iter,
     )
     .resources(num_gpus=num_gpus)
     .multi_agent(
@@ -183,7 +189,7 @@ ray.init(
 
 algo = config.build_algo()
 algo.restore(os.path.abspath(load_dir))
-algo.learner_group.foreach_learner(betas_tensor_to_float)
+#algo.learner_group.foreach_learner(betas_tensor_to_float)
 policy_loss = {}
 env_reward = []
 if wandb_key != None:
