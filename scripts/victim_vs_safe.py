@@ -5,6 +5,8 @@ import argparse
 import sys
 import wandb
 import ray
+from pettingzoo.atari import surround_v2
+
 
 if os.path.abspath("../") not in sys.path:
     sys.path.append(os.path.abspath("../"))
@@ -12,6 +14,7 @@ if os.path.abspath("./") not in sys.path:
     sys.path.append(os.path.abspath("./"))
 
 from utils.surround_v2_wrapper import Surround_v2_Wrapper
+from ray.rllib.env.wrappers.pettingzoo_env import ParallelPettingZooEnv
 from ray.tune.registry import register_env
 from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.core.rl_module.default_model_config import DefaultModelConfig
@@ -86,7 +89,14 @@ else:
 
 # --- Environment creator ---
 def env_creator(config):
-    env = Surround_v2_Wrapper()
+    env = Surround_v2_Wrapper(
+        surround_v2.parallel_env(
+        obs_type="rgb_image",
+        full_action_space=False,
+        max_cycles=15000,
+    )
+    )
+
     # IMPORTANT for RLlib env checks
     env.reset()
     return env
@@ -109,7 +119,7 @@ ENV_NAME = "surround_v2"
 
 register_env(
     ENV_NAME,
-    lambda config: env_creator(config),
+    lambda config: ParallelPettingZooEnv(env_creator(config)),
 )
 
 config = (
@@ -161,7 +171,7 @@ config = (
 )
 
 ray.init(
-    num_cpus=int(os.environ["SLURM_CPUS_PER_GPU"]),
+    num_cpus=int(1),
     num_gpus=1,
 )
 algo = config.build()
