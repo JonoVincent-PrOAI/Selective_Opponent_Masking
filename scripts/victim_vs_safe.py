@@ -15,6 +15,9 @@ from utils.surround_v5_wrapper import Surround_v5_Wrapper
 from ray.tune.registry import register_env
 from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.core.rl_module.default_model_config import DefaultModelConfig
+from random_safe_agent import random_safe_surround
+from ray.rllib.core.rl_module.multi_rl_module import MultiRLModuleSpec
+from ray.rllib.core.rl_module.rl_module import RLModuleSpec
 
 # --- Defines and parses arguments ---
 parser = argparse.ArgumentParser(description="Pretraining for model in the surroun_v2 env. Trains a model in wrapped surround_v5")
@@ -33,7 +36,7 @@ args = parser.parse_args()
 if args.saveDirectory:
     save_dir = args.saveDirectory
 else:
-    save_dir = "./ray_results/PPO_surround_v5/"
+    save_dir = "./ray_results/PPO_surround_v2/"
 if args.checkpoint:
     checkpoint = args.checkpoint
 else:
@@ -91,9 +94,21 @@ def env_creator(config):
     env.reset()
     return env
 
+def mapping_fn(agent_id, episode, *args, **kwargs):
+    if hash(episode.id_) % 2 == 0:
+        if agent_id == 'first_0':
+            module = "main"
+        else:
+            module = 'random_safe'
+    else:
+        if agent_id == 'second_0':
+            module =  "main"
+        else:
+            module = 'random_safe'
+    return(module)
 
 # --- Register env with RLlib ---
-ENV_NAME = "surround_v5"
+ENV_NAME = "surround_v2"
 
 register_env(
     ENV_NAME,
@@ -104,35 +119,44 @@ config = (
     PPOConfig()
     .environment(env=ENV_NAME)
     .framework("torch")
+    .framework("torch")
     .rl_module(
-        model_config=DefaultModelConfig(
-            conv_filters=[
-                [16, 4, 2],
-                [32, 4, 2],
-                [64, 4, 2],
-                [128, 4, 2],
-            ],
-            fcnet_activation="relu",
+        rl_module_spec=MultiRLModuleSpec(
+            rl_module_specs={
+                "main": RLModuleSpec(
+                    model_config=DefaultModelConfig(
+                        conv_filters=[
+                            [16, 4, 2],
+                            [32, 4, 2],
+                            [64, 4, 2],
+                            [128, 4, 2],
+                        ],
+                        fcnet_activation="relu",
+                    )
+                ),
+                "random_safe": RLModuleSpec(
+                    module_class = random_safe_surround
+                )
+            }
         )
     )
     .training(
-        train_batch_size=batch_size,
+        train_batch_size=1024,
         gamma=0.99,
         lr=2.5e-4,
         clip_param=0.2,
         vf_loss_coeff=0.5,
         entropy_coeff=0.01,
     )
-    .resources(num_gpus=num_gpus)
-    .env_runners(
-        num_cpus_per_env_runner=0.1,
-        num_envs_per_env_runner = 3,      
-        rollout_fragment_length=rollout_fragment_length,
-        batch_mode="truncate_episodes",
+    .resources(num_gpus=0)
+    .multi_agent(
+        policies={"main", "random_safe"},
+        policies_to_train=["main"],
+        policy_mapping_fn= mapping_fn,
     )
-    .learners(
-    num_learners=1,
-    num_gpus_per_learner=1, 
+    .env_runners(
+        rollout_fragment_length=512,
+        batch_mode="complete_episodes",
     )
 )
 
