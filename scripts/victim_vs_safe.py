@@ -125,8 +125,7 @@ register_env(
 config = (
     PPOConfig()
     .environment(env=ENV_NAME)
-    .framework("torch",
-               torch_compile = True)
+    .framework("torch")
     .rl_module(
         rl_module_spec=MultiRLModuleSpec(
             rl_module_specs={
