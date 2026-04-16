@@ -190,10 +190,13 @@ for i in range(num_iterations):
     metrics = (algo.train())
     print(metrics['timers'])
     ep_reward = metrics["env_runners"].get("episode_return_mean")
-    print("Episode reward mean:", ep_reward)
+    if 'main' in metrics["env_runners"]["module_episode_returns_mean"].keys():
+            reward = metrics["env_runners"]["module_episode_returns_mean"]["main"]
+            wandb.log({'Episode Mean Reward': reward})
+            print("Episode reward mean:", reward)
     if wandb_key != None:
         print('logged to wandb')
-        wandb.log({'Episode Reward Mean': ep_reward})
+        wandb.log({'Episode Reward Mean': reward})
 
 
     env_reward.append(metrics["env_runners"].get("episode_return_mean"))
