@@ -178,6 +178,8 @@ algo = config.build()
 print("Num env runners:", algo.config.num_env_runners)
 policy_loss = {}
 env_reward = []
+if wandb_key != None:
+    wandb.init()
 for i in range(num_iterations):
     print(str(i+1) + '/' + str(num_iterations))
     metrics = (algo.train())
