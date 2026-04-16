@@ -30,13 +30,13 @@ parser.add_argument("-chkpt", "--checkpoint", help="After how many episodes shou
 parser.add_argument("-sz", "--batchSize", help="Size of training batches.", default=1536)
 parser.add_argument("-rl", "--rolloutLength", help="Lenght of rollout fragments.", default=1024)
 parser.add_argument('-sgd', "--sgdIterations", help="Number of Sgd updates per batch.", default=3)
-parser.add_argument("-mbsz", "--minibatchSize", help='Size of sgd minibatches', default = 512)
+parser.add_argument("-mbsz", "--minibatchSize", help='Size of sgd minibatches', default = 8192)
 
 parser.add_argument("-ner", "--numEnvRunners", help="Number of env ruuners.", default=1)
 parser.add_argument("-ngpu", "--numGPU", help="Number of GPUs available for training.", default=1)
 parser.add_argument("-ncpu", "--numCPU", help="Number of CPUs available for training.", default=0)
 parser.add_argument("-cpurun", "--numCPUperRun", help="Number of CPUs per env runner instance.", default=1)
-parser.add_argument("-envrun", "--numEnvPerRun", help="Number of env instances per env runner.", default=3)
+parser.add_argument("-envrun", "--numEnvPerRun", help="Number of env instances per env runner.", default=8)
 
 parser.add_argument("-nl", "--numLearners", help="Number of learner instances.", default=1)
 parser.add_argument("-gpul", "--numGPUperLearn", help="Number of GPUs per learner instance.", default=1)
