@@ -28,8 +28,8 @@ parser.add_argument("-sdir", "--saveDirectory", help="Directory checkpoints are 
 parser.add_argument("-chkpt", "--checkpoint", help="After how many episodes should a checkpoint be saved.", default=10)
 
 parser.add_argument("-sz", "--batchSize", help="Size of training batches.", default=1536)
-parser.add_argument("-rl", "--rolloutLength", help="Lenght of rollout fragments.", default=512)
-parser.add_argument('-sgd', "--sgdIterations", help="Number of Sgd updates per batch.", default=20)
+parser.add_argument("-rl", "--rolloutLength", help="Lenght of rollout fragments.", default=1024)
+parser.add_argument('-sgd', "--sgdIterations", help="Number of Sgd updates per batch.", default=3)
 parser.add_argument("-mbsz", "--minibatchSize", help='Size of sgd minibatches', default = 512)
 
 parser.add_argument("-ner", "--numEnvRunners", help="Number of env ruuners.", default=1)
@@ -40,7 +40,7 @@ parser.add_argument("-envrun", "--numEnvPerRun", help="Number of env instances p
 
 parser.add_argument("-nl", "--numLearners", help="Number of learner instances.", default=1)
 parser.add_argument("-gpul", "--numGPUperLearn", help="Number of GPUs per learner instance.", default=1)
-parser.add_argument("-cpul", "--numCPUperLearn", help="Number of CPUs per learner instance.", default=1)
+parser.add_argument("-cpul", "--numCPUperLearn", help="Number of CPUs per learner instance.", default=2)
 
 
 parser.add_argument("-ni", "--numIter", help="Number of Training Iterations.", default=10)
@@ -75,7 +75,7 @@ if args.WandBKey:
     wandb.login(key = wandb_key)
 
     run = wandb.init(
-        project = 'Selective_Masking_Training',
+        project = 'Selective_Masking_Pretraining',
         config={
             "learning rate" : 2.5e-4,
             "epochs" : num_iterations,
@@ -125,8 +125,8 @@ register_env(
 config = (
     PPOConfig()
     .environment(env=ENV_NAME)
-    .framework("torch")
-    .framework("torch")
+    .framework("torch",
+               torch_compile = True)
     .rl_module(
         rl_module_spec=MultiRLModuleSpec(
             rl_module_specs={
@@ -148,14 +148,14 @@ config = (
         )
     )
     .training(
-        train_batch_size=1024,
+        train_batch_size=batch_size,
         gamma=0.99,
         lr=2.5e-4,
         clip_param=0.2,
         vf_loss_coeff=0.5,
         entropy_coeff=0.01,
     )
-    .resources(num_gpus=0)
+    .resources(num_gpus=num_gpus)
     .multi_agent(
         policies={"main", "random_safe"},
         policies_to_train=["main"],
@@ -167,6 +167,11 @@ config = (
         num_envs_per_env_runner = num_env_per_env_runner,
         rollout_fragment_length=rollout_fragment_length,
         batch_mode="truncate_episodes",
+    )
+    .learners(
+        num_learners = num_learners,
+        num_gpus_per_learner = num_GPUs_per_learner,
+        num_cpus_per_learner = num_CPUs_per_learner, 
     )
 )
 
