@@ -171,8 +171,8 @@ config = (
 )
 
 ray.init(
-    num_cpus=int(1),
-    num_gpus=1,
+    num_cpus=num_cpus,
+    num_gpus=num_gpus,
 )
 algo = config.build()
 print("Num env runners:", algo.config.num_env_runners)
