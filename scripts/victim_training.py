@@ -142,10 +142,10 @@ config = (
     .rl_module(
         model_config=DefaultModelConfig(
             conv_filters=[
-                [16, 4, 2],
                 [32, 4, 2],
                 [64, 4, 2],
                 [128, 4, 2],
+                [256, 4, 2],
             ],
             conv_activation="silu",
             head_fcnet_hiddens=[256],
@@ -213,7 +213,7 @@ for i in range(num_iterations):
         print('logged to wandb')
         if 'main' in metrics["env_runners"]["module_episode_returns_mean"].keys():
             reward = metrics["env_runners"]["module_episode_returns_mean"]["main"]
-            wandb.log({'Main Policy Mean Reward': reward})
+            wandb.log({'Episode Mean Reward': reward})
     if i % int(checkpoint) == 0:
         dir = os.path.abspath(save_dir + "/ep-" + str(i))
         algo.save(dir)

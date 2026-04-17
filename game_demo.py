@@ -26,7 +26,7 @@ class GameDemo():
         pygame.init()
 
         if model_dir == None: 
-            self.model_dir = os.path.abspath("./ray_results/PPO_surround_v2/run-5")
+            self.model_dir = os.path.abspath("./ray_results/Pretraining/run-1")
         else:
             self.model_dir = os.path.abspath(model_dir)
 

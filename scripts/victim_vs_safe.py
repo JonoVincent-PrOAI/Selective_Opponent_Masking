@@ -24,8 +24,9 @@ from ray.rllib.core.rl_module.rl_module import RLModuleSpec
 
 # --- Defines and parses arguments ---
 parser = argparse.ArgumentParser(description="Pretraining for model in the surroun_v2 env. Trains a model in wrapped surround_v5")
-parser.add_argument("-sdir", "--saveDirectory", help="Directory checkpoints are saved to.", default= "./ray_results/PPO_surround_v2/")
+parser.add_argument("-sdir", "--saveDirectory", help="Directory checkpoints are saved to.", default= "./ray_results/Pretraining/")
 parser.add_argument("-chkpt", "--checkpoint", help="After how many episodes should a checkpoint be saved.", default=10)
+parser.add_argument("-ldir", "--loadDirectory", help="Model checkpoint directory.", default=None)
 
 parser.add_argument("-sz", "--batchSize", help="Size of training batches.", default=1536)
 parser.add_argument("-rl", "--rolloutLength", help="Lenght of rollout fragments.", default=1024)
@@ -51,6 +52,7 @@ args = parser.parse_args()
 
 save_dir = args.saveDirectory
 checkpoint = args.checkpoint
+load_dir = args.loadDirectory
 
 batch_size = int(args.batchSize)
 rollout_fragment_length = int(args.rolloutLength)
@@ -85,7 +87,10 @@ if args.WandBKey:
 else:
     wandb_key = None
 
-
+def betas_tensor_to_float(learner):
+    for param_grp_key in learner._optimizer_parameters.keys():
+        param_grp = param_grp_key.param_groups[0]
+        param_grp["betas"] = tuple(beta.item() for beta in param_grp["betas"])
 
 # --- Environment creator ---
 def env_creator(config):
@@ -132,10 +137,10 @@ config = (
                 "main": RLModuleSpec(
                     model_config=DefaultModelConfig(
                         conv_filters=[
-                            [16, 4, 2],
                             [32, 4, 2],
                             [64, 4, 2],
                             [128, 4, 2],
+                            [256, 4, 2],
                         ],
                         fcnet_activation="relu",
                     )
@@ -179,6 +184,11 @@ ray.init(
     num_gpus=num_gpus,
 )
 algo = config.build()
+
+if load_dir != None:
+    algo.restore(os.path.abspath(load_dir))
+    algo.learner_group.foreach_learner(betas_tensor_to_float)
+
 print("Num env runners:", algo.config.num_env_runners)
 policy_loss = {}
 env_reward = []
