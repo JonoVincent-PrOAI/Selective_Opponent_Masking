@@ -67,8 +67,8 @@ num_cpu_per_env_runner = int(args.numCPUperRun)
 
 num_env_per_env_runner = int(args.numEnvPerRun)
 num_learners = int(args.numLearners)
-num_GPUs_per_learner = int(args.numGPUperLearn)
-num_CPUs_per_learner = int(args.numCPUperLearn)
+num_GPUs_per_learner = float(args.numGPUperLearn)
+num_CPUs_per_learner = float(args.numCPUperLearn)
 
 num_iterations = int(args.numIter)
 verbose =bool(args.verbose)
