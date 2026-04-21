@@ -17,7 +17,7 @@ from utils.surround_v2_wrapper import Surround_v2_Wrapper
 from ray.rllib.env.wrappers.pettingzoo_env import ParallelPettingZooEnv
 from ray.tune.registry import register_env
 from ray.rllib.algorithms.ppo import PPOConfig
-from ray.rllib.algorithms.appo import APPOConfig
+
 from ray.rllib.core.rl_module.default_model_config import DefaultModelConfig
 from random_safe_agent import random_safe_surround
 from ray.rllib.core.rl_module.multi_rl_module import MultiRLModuleSpec
@@ -67,8 +67,8 @@ num_cpu_per_env_runner = int(args.numCPUperRun)
 
 num_env_per_env_runner = int(args.numEnvPerRun)
 num_learners = int(args.numLearners)
-num_GPUs_per_learner = float(args.numGPUperLearn)
-num_CPUs_per_learner = float(args.numCPUperLearn)
+num_GPUs_per_learner = int(args.numGPUperLearn)
+num_CPUs_per_learner = int(args.numCPUperLearn)
 
 num_iterations = int(args.numIter)
 verbose =bool(args.verbose)
@@ -129,7 +129,7 @@ register_env(
 )
 
 config = (
-    APPOConfig()
+    PPOConfig(use_critic = True,)
     .environment(env=ENV_NAME)
     .framework("torch")
     .rl_module(
