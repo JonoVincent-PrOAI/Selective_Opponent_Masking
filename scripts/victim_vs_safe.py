@@ -128,7 +128,7 @@ register_env(
 )
 
 config = (
-    PPOConfig()
+    PPOConfig(use_critic = True,)
     .environment(env=ENV_NAME)
     .framework("torch")
     .rl_module(
@@ -137,10 +137,10 @@ config = (
                 "main": RLModuleSpec(
                     model_config=DefaultModelConfig(
                         conv_filters=[
+                            [16, 4, 2],
                             [32, 4, 2],
                             [64, 4, 2],
                             [128, 4, 2],
-                            [256, 4, 2],
                         ],
                         fcnet_activation="relu",
                     )
