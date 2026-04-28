@@ -18,11 +18,12 @@ from ray.rllib.core.rl_module.default_model_config import DefaultModelConfig
 from ray.tune.registry import register_env
 from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.algorithms.algorithm import Algorithm
-
+from ray.rllib.core.rl_module.rl_module import RLModuleSpec
 
 from utils.surround_v2_wrapper import Surround_v2_Wrapper
 from utils.self_play_callback import SelfPlayCallback
 from utils.PFSP_callback import PFSPCallback
+from MaskedPPO import ActionMaskingPPO
 
 parser = argparse.ArgumentParser(description="Pretraining for model in the surroun_v2 env. Trains a model in wrapped surround_v5")
 parser.add_argument("-ldir", "--loadDirectory", help="Model checkpoint directory.")
@@ -140,15 +141,18 @@ config = (
     )
     .framework("torch")
     .rl_module(
-        model_config=DefaultModelConfig(
-            conv_filters=[
-                [32, 4, 2],
-                [64, 4, 2],
-                [128, 4, 2],
-                [256, 4, 2],
-            ],
-            conv_activation="silu",
-            head_fcnet_hiddens=[256],
+        rl_module_spec=RLModuleSpec(
+            module_class=ActionMaskingPPO,
+            model_config=DefaultModelConfig(
+                conv_filters=[
+                    [16, 4, 2],
+                    [32, 4, 2],
+                    [64, 4, 2],
+                    [128, 4, 2],
+                ],
+                conv_activation="silu",
+                head_fcnet_hiddens=[128],
+            ),
         )
     )
     .training(
@@ -189,7 +193,7 @@ ray.init(
 
 algo = config.build_algo()
 algo.restore(os.path.abspath(load_dir))
-algo.learner_group.foreach_learner(betas_tensor_to_float)
+#algo.learner_group.foreach_learner(betas_tensor_to_float)
 policy_loss = {}
 env_reward = []
 if wandb_key != None:

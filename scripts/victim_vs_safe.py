@@ -23,6 +23,8 @@ from random_safe_agent import random_safe_surround
 from ray.rllib.core.rl_module.multi_rl_module import MultiRLModuleSpec
 from ray.rllib.core.rl_module.rl_module import RLModuleSpec
 
+from MaskedPPO import ActionMaskingPPO
+
 # --- Defines and parses arguments ---
 parser = argparse.ArgumentParser(description="Pretraining for model in the surroun_v2 env. Trains a model in wrapped surround_v5")
 parser.add_argument("-sdir", "--saveDirectory", help="Directory checkpoints are saved to.", default= "./ray_results/Pretraining/")
@@ -136,6 +138,7 @@ config = (
         rl_module_spec=MultiRLModuleSpec(
             rl_module_specs={
                 "main": RLModuleSpec(
+                    module_class=ActionMaskingPPO,
                     model_config=DefaultModelConfig(
                         conv_filters=[
                             [16, 4, 2],
@@ -143,7 +146,8 @@ config = (
                             [64, 4, 2],
                             [128, 4, 2],
                         ],
-                        fcnet_activation="relu",
+                        fcnet_activation="silu",
+                        head_fcnet_hiddens=[128],
                     )
                 ),
                 "random_safe": RLModuleSpec(

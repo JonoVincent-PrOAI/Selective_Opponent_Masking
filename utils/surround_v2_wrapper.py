@@ -23,7 +23,6 @@ class Surround_v2_Wrapper():
         self.BOARD_BOUNDARY = [27,207,0,160]#the edges of the board in the rgb image (y,y,x,x)
         self.BOARD_CELL_SIZE = {'height': 20, 'width': 40}#the dimensions of the baord in number of cells
         self.CELL_DIMENSION = {'height' : 9, 'width' : 4}#the pixel dimensions of cells in the rgb image
-        self.action_transforms = {1: [-1,0], 2:[0,1], 3:[0,-1], 4:[1,0]}
 
         self.AGENT_INFO = {
             'first_0': #agents name
@@ -94,7 +93,7 @@ class Surround_v2_Wrapper():
     Also skips frames to avoid states where no change has occurred.
     '''
     def step(self, action_dict):
-
+        #sums rewards across skipped frames to ensure no reward signal is missed
         total_reward = {agent: 0 for agent in action_dict}
         for _ in range(self.frame_skip):
             img_obs, reward, termination, truncation, info = self.env.step(action_dict)
@@ -110,33 +109,7 @@ class Surround_v2_Wrapper():
         for agent in reward.keys():
             obs[agent] = self.update_board(img_obs[agent], agent)
 
-        #adds reward for not dying on each timestep
-        for agent in reward.keys():
-            if action_dict[agent] in self.get_safe_actions(obs[agent]):
-                total_reward[agent] += 0.1
-
         return obs, total_reward, termination, truncation, info
-    
-    def get_safe_actions(self, obs):
-        safe_actions = []
-        player_pos = self.get_player_pos(obs)
-        if player_pos != None:
-            safe_actions = []
-            for action, transform in zip(self.action_transforms.keys(), self.action_transforms.values()):
-                pos = [(player_pos[0] + transform[0]), (player_pos[1] + transform[1])]
-                if pos[0] < len(obs) and pos[1] < len(obs[0]):
-                    if obs[pos[0]][pos[1]] == 0:
-                        safe_actions.append(action)
-        if safe_actions == []:
-            safe_actions = [0]
-        return(safe_actions)
-    
-    def get_player_pos(self, obs):
-        player_pos = None
-        pos = np.argwhere(obs == 2).tolist()
-        if len(pos[0]) > 0:
-            player_pos = [pos[0][0], pos[1][0]]
-        return(player_pos)
     
     def close(self):
         self.env.close()
