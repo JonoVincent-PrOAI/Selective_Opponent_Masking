@@ -129,7 +129,7 @@ register_env(
 )
 
 config = (
-    PPOConfig(use_critic = True,)
+    PPOConfig()
     .environment(env=ENV_NAME)
     .framework("torch")
     .rl_module(

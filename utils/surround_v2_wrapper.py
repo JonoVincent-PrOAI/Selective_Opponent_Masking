@@ -111,9 +111,9 @@ class Surround_v2_Wrapper():
             obs[agent] = self.update_board(img_obs[agent], agent)
 
         #adds reward for not dying on each timestep
-        for agent in reward.keys():
-            if action_dict[agent] in self.get_safe_actions(obs[agent]):
-                total_reward[agent] += 0.1
+        #for agent in reward.keys():
+            # if action_dict[agent] in self.get_safe_actions(obs[agent]):
+            #     total_reward[agent] += 0.1
 
         return obs, total_reward, termination, truncation, info
     
