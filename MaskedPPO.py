@@ -26,11 +26,17 @@ class ActionMaskingPPO(PPOTorchRLModule):
         catalog_class=None,
         **kwargs,
     ):
+        
         self.empty_space = 0
         self.opp_space = 1
         self.pla_space = 2
         self.actions = np.array([1,2,3,4])
         self.transforms = np.array([[-1,0],[0,1],[0,-1],[1,0]])
+
+        self.transforms = torch.tensor(
+            self.transforms,
+            dtype=torch.long
+        )
 
         super().__init__(
             observation_space=observation_space,
@@ -48,11 +54,13 @@ class ActionMaskingPPO(PPOTorchRLModule):
         if obs_batch.ndim == 4:
             obs_batch = obs_batch[..., 0]
         
+        device = obs_batch.device
+
         B,H,W = obs_batch.shape
         A = len(self.actions)
 
         player_pos_batch, has_player = self.get_player_pos(obs_batch)
-        next_pos = player_pos_batch[:, None, :] + self.transforms[None, :, :]
+        next_pos = player_pos_batch[:, None, :] + self.transforms[None, :, :].to_device(device)
         x = next_pos[:, :, 0]
         y = next_pos[:, :, 1]
 
@@ -63,14 +71,14 @@ class ActionMaskingPPO(PPOTorchRLModule):
         x_clipped = torch.clamp(x, 0, H - 1)
         y_clipped = torch.clamp(y, 0, W - 1)
 
-        batch_idx = torch.arange(B, device=obs_batch.device).unsqueeze(1)
+        batch_idx = torch.arange(B, device=device).unsqueeze(1)
 
 
         is_empty = obs_batch[batch_idx, x_clipped, y_clipped] == self.empty_space        
         
-        safe_mask = in_bounds & is_empty  # (B, A)
+        safe_mask = in_bounds & is_empty
         safe_mask[~has_player] = False
-
+        
 
         return safe_mask
 
@@ -80,35 +88,26 @@ class ActionMaskingPPO(PPOTorchRLModule):
         B, H, W = obs_batch.shape
         device = obs_batch.device
 
-        # --- player mask ---
         player_mask = (obs_batch == self.pla_space)
         flat_player = player_mask.view(B, -1)
 
         player_idx = torch.argmax(flat_player.int(), dim=1)
         has_player = flat_player[torch.arange(B, device=device), player_idx]
 
-        # --- opponent mask ---
         opp_mask = (obs_batch == self.opp_space)
         flat_opp = opp_mask.view(B, -1)
 
         opp_idx = torch.argmax(flat_opp.int(), dim=1)
         has_opp = flat_opp[torch.arange(B, device=device), opp_idx]
 
-        # --- choose index ---
-        # if player exists → use player_idx
-        # else → use opponent_idx
         final_idx = torch.where(has_player, player_idx, opp_idx)
 
-        # --- compute positions ---
         rows = final_idx // W
         cols = final_idx % W
         positions = torch.stack([rows, cols], dim=1)
 
-        # --- update has_player ---
-        # now "player exists" if either real player OR covered by opponent
         has_player = has_player | has_opp
 
-        # --- fallback (rare): neither exists ---
         positions[~has_player] = -1
 
         return positions, has_player      
@@ -116,7 +115,6 @@ class ActionMaskingPPO(PPOTorchRLModule):
 
     @override(PPOTorchRLModule)
     def _forward_inference(self, batch: Dict[str, TensorType], **kwargs) -> Dict[str, TensorType]:
-
         outs = super()._forward_inference(batch, **kwargs)[Columns.ACTION_DIST_INPUTS]
        
         safe_mask = self.get_safe_actions(batch)
@@ -133,7 +131,6 @@ class ActionMaskingPPO(PPOTorchRLModule):
     
     @override(PPOTorchRLModule)
     def _forward_exploration(self, batch: Dict[str, TensorType], **kwargs) -> Dict[str, TensorType]:
-
         outs = super()._forward_inference(batch, **kwargs)[Columns.ACTION_DIST_INPUTS]
 
         safe_mask = self.get_safe_actions(batch)
@@ -148,7 +145,6 @@ class ActionMaskingPPO(PPOTorchRLModule):
     
     @override(PPOTorchRLModule)
     def _forward_train(self, batch: Dict[str, TensorType], **kwargs) -> Dict[str, TensorType]:
-
         outs = super()._forward_inference(batch, **kwargs)[Columns.ACTION_DIST_INPUTS]
         
         safe_mask = self.get_safe_actions(batch)
