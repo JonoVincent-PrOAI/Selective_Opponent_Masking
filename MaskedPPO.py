@@ -60,7 +60,7 @@ class ActionMaskingPPO(PPOTorchRLModule):
         A = len(self.actions)
 
         player_pos_batch, has_player = self.get_player_pos(obs_batch)
-        next_pos = player_pos_batch[:, None, :] + self.transforms[None, :, :].to_device(device)
+        next_pos = player_pos_batch[:, None, :] + self.transforms[None, :, :].to(device)
         x = next_pos[:, :, 0]
         y = next_pos[:, :, 1]
 
