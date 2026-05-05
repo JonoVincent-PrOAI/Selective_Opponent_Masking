@@ -26,7 +26,7 @@ from utils.PFSP_callback import PFSPCallback
 from MaskedPPO import ActionMaskingPPO
 
 parser = argparse.ArgumentParser(description="Pretraining for model in the surroun_v2 env. Trains a model in wrapped surround_v5")
-parser.add_argument("-ldir", "--loadDirectory", help="Model checkpoint directory.")
+parser.add_argument("-ldir", "--loadDirectory", help="Model checkpoint directory.", default = None)
 parser.add_argument("-sdir", "--saveDirectory", help="Directory checkpoints are saved to.", default= "./ray_results/PPO_surround_v2/")
 parser.add_argument("-chkpt", "--checkpoint", help="After how many episodes should a checkpoint be saved.", default=10)
 
@@ -55,10 +55,8 @@ parser.add_argument("-v", "--verbose", help="True/False whether outputs should b
 parser.add_argument("-wnb", "--WandBKey", help="API key W and B logger.")
 args = parser.parse_args()
 
-if args.loadDirectory:
-    load_dir = args.loadDirectory
-else:
-    raise ValueError("Load directory must be provided")
+load_dir = args.loadDirectory
+
 save_dir = args.saveDirectory
 checkpoint = args.checkpoint
 
@@ -192,7 +190,8 @@ ray.init(
 )
 
 algo = config.build_algo()
-algo.restore(os.path.abspath(load_dir))
+if load_dir != None:
+    algo.restore(os.path.abspath(load_dir))
 #algo.learner_group.foreach_learner(betas_tensor_to_float)
 policy_loss = {}
 env_reward = []

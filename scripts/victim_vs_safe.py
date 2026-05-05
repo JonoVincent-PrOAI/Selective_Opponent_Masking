@@ -162,6 +162,8 @@ config = (
         lr=2.5e-4,
         clip_param=0.2,
         vf_loss_coeff=0.5,
+        minibatch_size=minibatch_size,
+        num_epochs=num_sgd_iter,
         entropy_coeff=0.01,
     )
     .resources(num_gpus=num_gpus)
