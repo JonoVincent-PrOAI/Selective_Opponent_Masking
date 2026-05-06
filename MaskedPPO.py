@@ -122,7 +122,6 @@ class ActionMaskingPPO(PPOTorchRLModule):
         safe_mask = torch.cat([padding_mask, safe_mask], dim=1)
 
         masked_outs = outs + ((~safe_mask) * (-1e9))
-
         print(masked_outs)
 
         return {
@@ -135,8 +134,7 @@ class ActionMaskingPPO(PPOTorchRLModule):
 
         safe_mask = self.get_safe_actions(batch)
         padding_mask = safe_mask.sum(dim=1, keepdim=True) == 0
-        safe_mask = torch.cat([safe_mask, padding_mask], dim=1)
-
+        safe_mask = torch.cat([padding_mask, safe_mask], dim=1)
         masked_outs = outs + ((~safe_mask) * (-1e9))
 
         return {
@@ -149,7 +147,7 @@ class ActionMaskingPPO(PPOTorchRLModule):
         
         safe_mask = self.get_safe_actions(batch)
         padding_mask = safe_mask.sum(dim=1, keepdim=True) == 0
-        safe_mask = torch.cat([safe_mask, padding_mask], dim=1)
+        safe_mask = torch.cat([padding_mask, safe_mask], dim=1)
 
         masked_outs = outs + ((~safe_mask) * (-1e9))
 
