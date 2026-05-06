@@ -122,7 +122,6 @@ class ActionMaskingPPO(PPOTorchRLModule):
         safe_mask = torch.cat([padding_mask, safe_mask], dim=1)
 
         masked_outs = outs + ((~safe_mask) * (-1e9))
-        print(masked_outs)
 
         return {
         Columns.ACTION_DIST_INPUTS: masked_outs
